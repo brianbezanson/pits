@@ -47,6 +47,7 @@
 #include "snapper.h"
 #include "led.h"
 #include "bmp085.h"
+#include "bmp280.h"
 #include "bme280.h"
 #include "aprs.h"
 #include "lora.h"
@@ -162,6 +163,12 @@ void LoadConfigFile(struct TConfig *Config)
 		printf("BMP085 Enabled\n");
 	}
 	
+	ReadBoolean(fp, "enable_bmp280", -1, 0, &(Config->EnableBMP280));
+	if (Config->EnableBMP280)
+	{
+		printf("BMP280 Enabled\n");
+	}
+
 	ReadBoolean(fp, "enable_bme280", -1, 0, &(Config->EnableBME280));
 	if (Config->EnableBME280)
 	{
@@ -621,7 +628,7 @@ int main(void)
 	unsigned char Sentence[200];
 	struct stat st = {0};
 	struct TGPS GPS;
-	pthread_t PredictionThread, LoRaThread, APRSThread, GPSThread, DS18B20Thread, ADCThread, CameraThread, BMP085Thread, BME280Thread, LEDThread, LogThread, PipeThread;
+	pthread_t PredictionThread, LoRaThread, APRSThread, GPSThread, DS18B20Thread, ADCThread, CameraThread, BMP085Thread, BMP280Thread, BME280Thread, LEDThread, LogThread, PipeThread;
 	if (prog_count("tracker") > 1)
 	
 	{
@@ -891,6 +898,15 @@ int main(void)
 		}
 	}
 
+	if (Config.EnableBMP280)
+	{
+		if (pthread_create(&BMP280Thread, NULL, BMP280Loop, &GPS))
+		{
+			fprintf(stderr, "Error creating BMP280 thread\n");
+			return 1;
+		}
+	}
+	
 	if (Config.EnableBME280)
 	{
 		if (pthread_create(&BME280Thread, NULL, BME280Loop, &GPS))
