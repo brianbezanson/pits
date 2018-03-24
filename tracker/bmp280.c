@@ -181,12 +181,11 @@ double bmp280GetTemperature(struct TBMP280 *bmp)
 	return T/100.0;
 }
 
+//Be sure that bmp280GetTemperature has been called recently, since it sets
+//the t_fine value that gets used here.  This is taken care of in BMP280Loop
 double bmp280GetPressure(struct TBMP280 *bmp)
 {
 	int64_t var1, var2, p;
-
-	// Must be done first to get the t_fine variable set up
-	bmp280GetTemperature(bmp);
 
 	int32_t adc_P = bmp280ReadInt24(bmp->fd, BMP280_REGISTER_PRESSUREDATA);
 	adc_P >>= 4;
