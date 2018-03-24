@@ -13,6 +13,21 @@
 #define BMP280_REGISTER_DIG_P8              0x9C
 #define BMP280_REGISTER_DIG_P9              0x9E
 
+#define BMP280_OFFSET_DIG_T1		0
+#define BMP280_OFFSET_DIG_T2		2
+#define BMP280_OFFSET_DIG_T3		4
+
+#define BMP280_OFFSET_DIG_P1		6
+#define BMP280_OFFSET_DIG_P2		8
+#define BMP280_OFFSET_DIG_P3		10
+#define BMP280_OFFSET_DIG_P4		12
+#define BMP280_OFFSET_DIG_P5		14
+#define BMP280_OFFSET_DIG_P6		16
+#define BMP280_OFFSET_DIG_P7		18
+#define BMP280_OFFSET_DIG_P8		20
+#define BMP280_OFFSET_DIG_P9		22
+
+
 #define BMP280_REGISTER_CHIPID             0xD0
 #define BMP280_REGISTER_VERSION            0xD1
 #define BMP280_REGISTER_SOFTRESET          0xE0
@@ -61,6 +76,8 @@ double bmp280GetTemperature(struct TBMP280 *bmp);
 double bmp280GetPressure(struct TBMP280 *bmp);
 int32_t bmp280ReadInt16(int fd, unsigned char address);
 int32_t bmp280ReadInt24(int fd, unsigned char address);
+int16_t bmp280ReadBlock(int fd, unsigned char address, unsigned char* buf, unsigned char len);
+int16_t bmp280ToInt16(unsigned char buf[], int offset);
 
 void *BMP280Loop(void *some_void_ptr)
 {
@@ -135,28 +152,49 @@ int32_t bmp280ReadInt24(int fd, unsigned char address)
 	return (int32_t) buf[0]<<16 | buf[1]<<8 | buf[2];
 }
 
+int16_t bmp280ReadBlock(int fd, unsigned char address, unsigned char* buf, unsigned char len)
+{
+	if(1 != write(fd, &address, 1))
+	{
+		return -1;
+	}
+	if(len != read(fd, buf, len))
+	{
+		return -1;
+	}
+	else
+	{
+		return len;
+	}
+}
+
+int16_t bmp280ToInt16(unsigned char buf[], int offset)
+{
+	return (int16_t) (buf[offset+1]<<8) + buf[offset];
+}
 
 int bmp280Calibration(struct TBMP280 *bmp)
 {
 	int res;
-	res =  bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_T1);
+	uint8_t buf[24];
+	res =  bmp280ReadBlock(bmp->fd, BMP280_REGISTER_DIG_T1, buf, 24);
 	if(res < 0){
 		return 1;
 	}
 
-	bmp->dig_T1 = (uint16_t) bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_T1);
-	bmp->dig_T2 = bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_T2);
-	bmp->dig_T3 = bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_T3);
+	bmp->dig_T1 = (uint16_t) bmp280ToInt16(buf, BMP280_OFFSET_DIG_T1);
+	bmp->dig_T2 = bmp280ToInt16(buf, BMP280_OFFSET_DIG_T2);
+	bmp->dig_T3 = bmp280ToInt16(buf, BMP280_OFFSET_DIG_T3);
 
-	bmp->dig_P1 = (uint16_t) bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_P1);
-	bmp->dig_P2 = bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_P2);
-	bmp->dig_P3 = bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_P3);
-	bmp->dig_P4 = bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_P4);
-	bmp->dig_P5 = bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_P5);
-	bmp->dig_P6 = bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_P6);
-	bmp->dig_P7 = bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_P7);
-	bmp->dig_P8 = bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_P8);
-	bmp->dig_P9 = bmp280ReadInt16(bmp->fd, BMP280_REGISTER_DIG_P9);
+	bmp->dig_P1 = (uint16_t) bmp280ToInt16(buf, BMP280_OFFSET_DIG_P1);
+	bmp->dig_P2 = bmp280ToInt16(buf, BMP280_OFFSET_DIG_P2);
+	bmp->dig_P3 = bmp280ToInt16(buf, BMP280_OFFSET_DIG_P3);
+	bmp->dig_P4 = bmp280ToInt16(buf, BMP280_OFFSET_DIG_P4);
+	bmp->dig_P5 = bmp280ToInt16(buf, BMP280_OFFSET_DIG_P5);
+	bmp->dig_P6 = bmp280ToInt16(buf, BMP280_OFFSET_DIG_P6);
+	bmp->dig_P7 = bmp280ToInt16(buf, BMP280_OFFSET_DIG_P7);
+	bmp->dig_P8 = bmp280ToInt16(buf, BMP280_OFFSET_DIG_P8);
+	bmp->dig_P9 = bmp280ToInt16(buf, BMP280_OFFSET_DIG_P9);
 
 	return 0;
 }
