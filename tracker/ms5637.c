@@ -1,9 +1,9 @@
-#define MS5637_CMD_READ_PROM1 	0xA1
-#define MS5637_CMD_READ_PROM2 	0xA2
-#define MS5637_CMD_READ_PROM3 	0xA3
-#define MS5637_CMD_READ_PROM4 	0xA4
-#define MS5637_CMD_READ_PROM5 	0xA5
-#define MS5637_CMD_READ_PROM6 	0xA6
+#define MS5637_CMD_READ_PROM1 	0xA2
+#define MS5637_CMD_READ_PROM2 	0xA4
+#define MS5637_CMD_READ_PROM3 	0xA6
+#define MS5637_CMD_READ_PROM4 	0xA8
+#define MS5637_CMD_READ_PROM5 	0xAA
+#define MS5637_CMD_READ_PROM6 	0xAC
 #define MS5637_CMD_RESET	0x1E
 #define MS5637_CMD_READ_RESULT	0x00
 //These are conversion commands for maximum oversampling, taking 16.44ms.
@@ -74,8 +74,8 @@ void *MS5637Loop(void *some_void_ptr)
 			ms5637Calculate(&baro);
 			GPS->BMP180Temperature = ms5637GetTemperature(&baro);
 			GPS->Pressure = ms5637GetPressure(&baro);
-			//printf("Temperature: %fdegC\n", temp/10.0);
-			//printf("Pressure: %fPa\n", press);
+			//printf("Temperature: %fdegC\n", GPS->BMP180Temperature);
+			//printf("Pressure: %fPa\n", GPS->Pressure);
 			close(baro.fd);
 		}
 
@@ -116,7 +116,7 @@ int32_t ms5637ReadInt24(int fd, unsigned char address)
 		return -1;
 	}
 
-	return (int32_t) buf[2]<<16 | buf[1]<<8 | buf[0];
+	return (int32_t) buf[0]<<16 | buf[1]<<8 | buf[2];
 }
 
 int ms5637SendCommand(int fd, unsigned char cmd){
@@ -159,6 +159,7 @@ void ms5637Calculate(struct TMS5637 *baro)
 	ms5637SendCommand(baro->fd, MS5637_CMD_CONV_D2);
 	usleep(17000); //datasheet says this will take 16.44ms
 	raw_temp = ms5637ReadInt24(baro->fd, MS5637_CMD_READ_RESULT);
+
 
 	//temperature calculation
 	dT = raw_temp - ((uint32_t)baro->C5 << 8);
