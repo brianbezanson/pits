@@ -31,10 +31,10 @@ struct TMS5637
 	int fd;
 
 	// Calibration constants
-	uint16_t C1, C2, C3, C4, C5, C6;	
+	int64_t C1, C2, C3, C4, C5, C6;	
 
 	//temp in 0.01 degree C and pressure in Pa
-	int32_t temp, press;
+	int64_t temp, press;
 };
 
 int ms5637Calibration(struct TMS5637 *baro);
@@ -147,11 +147,11 @@ int ms5637Calibration(struct TMS5637 *baro)
 
 void ms5637Calculate(struct TMS5637 *baro)
 {
-	uint32_t raw_temp; //direct reading from ADC
-	int32_t temp; //compensated temperature in hundredths of a degree C
-	int32_t dT; //intermediate step in temp calculation
-	uint32_t raw_press; //direct reading from ADC
-	int32_t press; //first-order compensated pressure in Pa
+	uint64_t raw_temp; //direct reading from ADC
+	int64_t temp; //compensated temperature in hundredths of a degree C
+	int64_t dT; //intermediate step in temp calculation
+	uint64_t raw_press; //direct reading from ADC
+	int64_t press; //first-order compensated pressure in Pa
 	int64_t offset, sensitivity; //pressure calculation intermediates
 	int64_t t2, off2, sens2; //second-order correction intermediates
 
@@ -162,8 +162,8 @@ void ms5637Calculate(struct TMS5637 *baro)
 
 
 	//temperature calculation
-	dT = raw_temp - ((uint32_t)baro->C5 << 8);
-	temp = 2000 + (int64_t)dT * (int64_t)baro->C6/(1<<23);
+	dT = raw_temp - (baro->C5 << 8);
+	temp = 2000 + dT * baro->C6/(1<<23);
 
 	//read pressure data
 	ms5637SendCommand(baro->fd, MS5637_CMD_CONV_D1);
@@ -171,13 +171,13 @@ void ms5637Calculate(struct TMS5637 *baro)
 	raw_press = ms5637ReadInt24(baro->fd, MS5637_CMD_READ_RESULT);
 
 	//pressure calculation
-	offset = ((int64_t)baro->C2<<17) + (baro->C4*dT)/(1<<6);
-	sensitivity = ((int64_t)baro->C1<<16) + (int64_t)baro->C3*(int64_t)dT/(1<<7);
+	offset = (baro->C2<<17) + (baro->C4*dT)/64;
+	sensitivity = (baro->C1<<16) + baro->C3*dT/128;
 
 	//second-order corrections
-	if(temp<2000)
+	if(temp < 2000)
 	{
-		t2 = 3*(int64_t)dT*(int64_t)dT/((int64_t)1<<33);
+		t2 = 3*dT*dT/((int64_t)1<<33);
 		off2 = 61*(temp-2000)*(temp-2000)/16;
 		sens2 = 29*(temp-2000)*(temp-2000)/16;
 		
@@ -189,7 +189,7 @@ void ms5637Calculate(struct TMS5637 *baro)
 	}
 	else
 	{
-		t2 = 5*(int64_t)dT*(int64_t)dT/((int64_t)1<<38);
+		t2 = 5*dT*dT/((int64_t)1<<38);
 		off2 = sens2 = 0;
 	}
 
