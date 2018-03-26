@@ -156,6 +156,7 @@ struct TConfig
 	int EnableBMP085;
 	int EnableBMP280;
 	int EnableBME280;
+	int EnableMS5637;
 	int ExternalDS18B20;
 	
 	// Logging
